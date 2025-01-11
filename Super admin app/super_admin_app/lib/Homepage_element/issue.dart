@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../pages/Isssuesdetails.dart';
-import '../Modules/issuesnotification.dart';
+import '../Model/issuesnotification.dart';
 class Complain extends StatefulWidget {
   const Complain({super.key});
 

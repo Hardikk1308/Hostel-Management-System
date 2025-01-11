@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 
 class Profilepage extends StatefulWidget {
-  final String text;
+  final String user;
   // final String text2;
-  const Profilepage({super.key, required this.text, });
+  const Profilepage({super.key, required this.user, });
 
   @override
   State<Profilepage> createState() => _ProfilepageState();
@@ -19,30 +19,30 @@ class _ProfilepageState extends State<Profilepage> {
 
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
-      backgroundColor: const Color.fromARGB(255, 247, 245, 245),
+    return  const Scaffold(
+      backgroundColor: Color.fromARGB(255, 247, 245, 245),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(15.0),
+          padding: EdgeInsets.all(15.0),
           child: Align(
             alignment: Alignment.topCenter,
             child: Column(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 70,
                   backgroundColor: Colors.black12,
                 ),
                 Text(
-                  widget.text,
-                  style: const TextStyle(
+                 ' widget.text,',
+                  style: TextStyle(
                       color: Colors.black,
                       fontWeight: FontWeight.w500,
                       fontSize: 30),
                 ),
-                const SizedBox(
+                SizedBox(
                   height: 20,
                 ),
-                const Column(
+                Column(
                   children: [
                     Padding(
                       padding: EdgeInsets.only(right: 250),

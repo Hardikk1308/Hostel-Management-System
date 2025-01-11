@@ -6,10 +6,15 @@ import 'package:super_admin_app/utils/Notification.dart';
 
 import '../pages/Dashboard_superadmin.dart';
 
-
-
 class Navbar extends StatelessWidget {
-  const Navbar({super.key});
+  final String Adminname;
+  final String course;
+  final String user;
+  const Navbar(
+      {super.key,
+      required this.Adminname,
+      required this.course,
+      required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +71,11 @@ class Navbar extends StatelessWidget {
           GestureDetector(
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) {
-                return const Dashboards(jwt_token: null,);
+                return Dashboards(
+                    course: course,
+                  Adminname: Adminname,
+                  user: user,
+                );
               }));
             },
             child: ListTile(
@@ -102,7 +111,7 @@ class Navbar extends StatelessWidget {
           GestureDetector(
             onTap: () {},
             child: const ListTile(
-              title:  Row(
+              title: Row(
                 children: [
                   Icon(
                     Icons.key,
@@ -121,7 +130,6 @@ class Navbar extends StatelessWidget {
                   ),
                 ],
               ),
-             
             ),
           ),
           SizedBox(

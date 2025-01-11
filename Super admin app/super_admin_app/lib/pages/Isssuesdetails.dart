@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-import '../Modules/issuesnotification.dart';
+import '../Model/issuesnotification.dart';
 
 class DetailIssue extends StatefulWidget {
   final issue selectedIssue;

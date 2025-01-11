@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:super_admin_app/utils/Homepage.dart';
 
 class LoginPage extends StatefulWidget {
   final bool? obscureText;
-  const LoginPage({super.key, this.obscureText = false});
+
+  const LoginPage({Key? key, this.obscureText = false}) : super(key: key);
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -15,167 +15,234 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool obscureText = true;
-  final TextEditingController erpidController = TextEditingController(); // Changed
+  final TextEditingController numberController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final border = OutlineInputBorder(
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final OutlineInputBorder border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(10),
     borderSide: const BorderSide(color: Colors.black),
   );
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
-  void loginUser() async {
-    if (erpidController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-      var regBody = {
-        "erpid": erpidController.text, // Changed
-        "password": passwordController.text
-      };
-
-      try {
-        var response = await http.post(
-          Uri.parse('http://192.168.202.126:7000/api/auth/login'), // Replace with your actual endpoint URL
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode(regBody),
-        );
-
-        if (response.statusCode == 200) {
-          var jsonResponse = jsonDecode(response.body);
-          if (jsonResponse['success']) { // Changed from 'status' to 'success'
-            // Save the JWT token using SharedPreferences
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            String token = jsonResponse['data']['token']; // Adjusted to match JSON structure
-            await prefs.setString('jwt_token', token);
-            Navigator.push(context, MaterialPageRoute(builder: (context) => Homeepage(jwt_token: token,))); // Corrected the class name
-
-            // Decode the JWT token
-            Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-            print('Decoded Token: $decodedToken');
-
-            // Add your logic for successful login
-            print('Login successful');
-          } else {
-            print('Something went wrong');
-          }
-        } else {
-          print('Error: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
-      }
-    } else {
-      print('ERPID and password cannot be empty');
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) {             
+      return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://hm-system-l1p1.onrender.com/api/auth/login'), // Replace with your backend login API URL
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'erpid': numberController.text,
+          'password': passwordController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success']) {
+          final user = data['user'];
+          final userId = user['_id'];
+
+          // Store the user ID in SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('_id', userId);
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login successful')),
+          );
+
+          // Navigate to HomePage_std and pass the userId
+          Navigator.pushReplacement(context, MaterialPageRoute(
+            builder: (context) => HomePage(user: userId), // Pass the userId
+          ));
+        } else {
+          // Show error message if 'success' is false
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed: ${data['message']}')),
+          );
+        }
+      } else {
+        // If the response code is not 200, show a failure message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login failed: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('_id');
+    if (userId != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage(user: userId)),
+      );
+    }
+  }
+
+
+   @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(left: 30, right: 30, top: 20),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/Login.png'),
-                const Text(
-                  'HELLO THERE!',
-                  style: TextStyle(
-                      fontSize: 30,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                TextFormField(
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'ERPID is required'; // Changed
-                    }
-                    return null;
-                  },
-                  controller: erpidController, // Changed
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: -4, horizontal: 10),
-                    focusedBorder: border,
-                    enabledBorder: border,
-                    focusedErrorBorder: border,
-                    errorBorder: border,
-                    labelText: "ERPID", // Changed
-                    labelStyle: const TextStyle(
-                      color: Colors.black38,
-                      fontSize: 15,
-                    ),
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double horizontalPadding = screenWidth > 800
+        ? 100.0
+        : screenWidth > 600
+            ? 50.0
+            : 30.0;
+    final double imageSize = screenWidth > 800
+        ? screenWidth * 0.5
+        : screenWidth > 600
+            ? screenWidth * 0.7
+            : screenWidth * 0.9;
+
+    return SafeArea(
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: 20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/Login.png',
+                    width: imageSize,
                   ),
-                  keyboardType: TextInputType.number, // Changed to number
-                  cursorColor: Colors.black38,
-                ),
-                const SizedBox(height: 15),
-                TextFormField(
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Password is required';
-                    }
-                    return null;
-                  },
-                  controller: passwordController,
-                  obscureText: obscureText,
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    suffix: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          obscureText = !obscureText;
-                        });
-                      },
-                      child: obscureText
-                          ? const Icon(Icons.visibility_off)
-                          : const Icon(Icons.visibility),
-                    ),
-                    errorBorder: border,
-                    focusedErrorBorder: border,
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: -4, horizontal: 10),
-                    focusedBorder: border,
-                    enabledBorder: border,
-                    labelText: 'Password',
-                    labelStyle: const TextStyle(
-                      color: Colors.black38,
-                      fontSize: 15,
-                    ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'HELLO THERE!',
+                    style: TextStyle(
+                        fontSize: 30,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold),
                   ),
-                  cursorColor: Colors.black38,
-                  keyboardType: TextInputType.text,
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(230, 45),
-                    backgroundColor: const Color(0xff407BFF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: numberController,
+                    keyboardType: TextInputType.number,
+                    cursorColor: Colors.black38,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: -4, horizontal: 10),
+                      focusedBorder: border,
+                      enabledBorder: border,
+                      focusedErrorBorder: border,
+                      errorBorder: border,
+                      labelText: "ERP ID",
+                      labelStyle: const TextStyle(
+                        color: Colors.black38,
+                        fontSize: 15,
+                      ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'ERP ID is required';
+                      }
+                      return null;
+                    },
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      loginUser();
-                    }
-                  },
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  const SizedBox(height: 15),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: obscureText,
+                    maxLines: 1,
+                    keyboardType: TextInputType.text,
+                    cursorColor: Colors.black38,
+                    decoration: InputDecoration(
+                      suffix: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            obscureText = !obscureText;
+                          });
+                        },
+                        child: obscureText
+                            ? const Icon(Icons.visibility_off)
+                            : const Icon(Icons.visibility),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: -4, horizontal: 10),
+                      focusedBorder: border,
+                      enabledBorder: border,
+                      focusedErrorBorder: border,
+                      errorBorder: border,
+                      labelText: 'Password',
+                      labelStyle: const TextStyle(
+                        color: Colors.black38,
+                        fontSize: 15,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Password is required';
+                      }
+                      return null;
+                    },
                   ),
-                )
-              ],
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(230, 45),
+                      backgroundColor: const Color(0xff407BFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                    onPressed: _isLoading ? null : _login,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Login',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    numberController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 }

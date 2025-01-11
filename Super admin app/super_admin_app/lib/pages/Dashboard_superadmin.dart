@@ -8,7 +8,11 @@ import '../Homepage_element/issue.dart';
 import '../utils/Iconbutton.dart';
 
 class Dashboards extends StatefulWidget {
-  const Dashboards({super.key, required jwt_token});
+  final String Adminname;
+  final String course;
+  final String user; 
+
+  const Dashboards({super.key, required this.Adminname, required this.course, required this.user, });
 
   @override
   State<Dashboards> createState() => DashboardsState();

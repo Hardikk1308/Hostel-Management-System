@@ -1,118 +1,137 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:super_admin_app/pages/Dashboard_superadmin.dart';
 import 'package:super_admin_app/utils/Profilepage.dart';
-
-
 import 'Notification.dart';
 import 'Side_navbar.dart';
+// ignore: library_prefixes
+import 'package:dio/dio.dart' as dioCall;
 
-class Homeepage extends StatefulWidget {
+class HomePage extends StatefulWidget {
+  final String user;
+  const HomePage({super.key, required this.user});
 
-  final jwt_token;
-  const Homeepage({Key? key, this.jwt_token}) : super(key: key);
- 
   @override
-  State<Homeepage> createState() => _HomeepageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeepageState extends State<Homeepage> {
-late String erpid;
+class _HomePageState extends State<HomePage> {                                                                                                                                                                                     
+  String studentName = 'Loading...';
+  String course = 'Loading...';
+
+  int currentIndex = 0;
+  final List<String> titles = ['Dashboard', 'Profile'];
+
+  Future<void> fetchUserData(String userId) async {
+    try {
+      final dio = dioCall.Dio();
+
+      final res = await dio.get(
+        'https://hm-system-l1p1.onrender.com/api/register/get-student/$userId',
+        queryParameters: {"userId": userId},
+      );
+
+      final response = res.data;
+
+      if (res.statusCode == 200) {
+        setState(() {
+          studentName = response['student']['name'];
+          course = response['student']['course'];
+        });
+      } else {
+        throw Exception(
+            'Failed to load user data, status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-     Map<String,dynamic> JwtDecoderToken = JwtDecoder.decode(widget.jwt_token);
-     erpid = JwtDecoderToken['erpid'];
+    fetchUserData(widget.user);
   }
-  int currentindex = 0;
-  final List<String> titles = [
-    'Dashboard',
-    'Profile',
-  ];
 
-  final screen = [
-    const Dashboards(jwt_token: null,),
-    const Profilepage(
-      text: 'Super Admin',
-      // text2: 'Couse',
-    )
-  ];
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    if (mounted) {
+      super.setState(fn);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      Dashboards(
+        Adminname: studentName,
+        course: course,
+        user: widget.user,
+      ), // Pass the data here
+      Profilepage(user: widget.user),
+    ];
+
     return SafeArea(
       child: Scaffold(
-        backgroundColor: Color.fromARGB(255, 247, 245, 245),
-        drawer: const Navbar(),
+        backgroundColor: const Color.fromARGB(255, 247, 245, 245),
+        drawer: Navbar(
+          Adminname: studentName,
+          course: course,
+          user: widget.user,
+        ),
         appBar: AppBar(
           toolbarHeight: 60,
           iconTheme: const IconThemeData(color: Colors.white, size: 30),
-          title: Text(titles[currentindex]),
+          title: Text(titles[currentIndex]),
           titleTextStyle: const TextStyle(
-              color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500),
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+          ),
           actions: [
             IconButton(
-              onPressed: () {},
-              icon: Padding(
-                  padding: EdgeInsets.only(right: 5),
-                  child: IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) {
-                              return const Notify();
-                            },
-                          ),
-                        );
-                      },
-                      icon: Icon(Icons.notification_add))),
-            )
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return const Notify();
+                    },
+                  ),
+                );
+              },
+              icon: const Icon(Icons.notification_add),
+            ),
           ],
-          actionsIconTheme: const IconThemeData(color: Colors.white, size: 25),
           backgroundColor: const Color(0xff407BFF),
         ),
-        body:Center(child: Column(
-          children: [
-            Text(erpid),
-          ],
-        )
-        ,)
-        //  screen[currentindex],
-       /* bottomNavigationBar: BottomNavigationBar(
+        body: screens[currentIndex],
+        bottomNavigationBar: BottomNavigationBar(
           selectedFontSize: 15,
           selectedItemColor: const Color(0xff407BFF),
-          selectedLabelStyle: const TextStyle(
-              color: Color(0xff407BFF),
-              fontSize: 15,
-              fontWeight: FontWeight.w600),
-          currentIndex: currentindex,
+          currentIndex: currentIndex,
           onTap: (index) {
             setState(() {
-              currentindex = index;
+              currentIndex = index;
             });
           },
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home,
-                color: Color(0xff407BFF),
-                size: 30,
-              ),
+              icon: Icon(Icons.home, size: 30),
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(
-                Icons.person,
-                color: Color(0xff407BFF),
-                size: 30,
-              ),
+              icon: Icon(Icons.person, size: 30),
               label: 'Profile',
             ),
           ],
-        ),*/
+        ),
       ),
     );
   }
