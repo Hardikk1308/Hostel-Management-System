@@ -57,7 +57,7 @@ class _QRViewExampleState extends State<QRViewExample> {
           context,
           MaterialPageRoute(
             builder: (context) => QRResultPage(
-              result: scanData.code ?? '',
+              erpid: scanData.code ?? '',
               onScanAgain: () {
                 // Reset the scanner and resume camera when coming back
                 setState(() {
